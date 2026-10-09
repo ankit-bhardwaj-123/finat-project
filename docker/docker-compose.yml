@@ -1,0 +1,25 @@
+services:
+  postgres_new:
+    image: postgres:16
+    container_name: payroll_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ankit
+      POSTGRES_PASSWORD: ankit
+      POSTGRES_DB: payroll_software
+    ports:
+      - "5434:5432"
+    volumes:
+      - payroll_postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:latest
+    container_name: payroll_adminer
+    restart: unless-stopped
+    depends_on:
+      - postgres_new
+    ports:
+      - "8081:8080"
+
+volumes:
+  payroll_postgres_data:
