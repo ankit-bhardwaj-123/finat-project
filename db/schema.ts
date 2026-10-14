@@ -1,3 +1,4 @@
+import { defineRelations } from "drizzle-orm";
 import {
   text,
   boolean,
@@ -20,6 +21,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   fullName: varchar("fullName", { length: 256 }).notNull(),
   userName: varchar("userName", { length: 256 }).notNull(),
+  tenantId : uuid("tenant_id").references(()=>tenants.id, {onDelete:"cascade"}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
@@ -42,7 +44,7 @@ export const groups = pgTable("groups", {
     groupName : text("group_name").notNull(),
     tenantId : uuid("tenant_id").references(()=>tenants.id, {onDelete:"cascade"}),
     createdAt : timestamp("created_at").defaultNow().notNull(),
-    updatedAt : timestamp("updated_at").defaultNow().$onUpdate(()=>new Date(0))
+    updatedAt : timestamp("updated_at").defaultNow().$onUpdate(()=>new Date())
 }, (table)=>({
     uniqueGroupNamePerTenant : unique("unique_group_name_per_tenant").on(table.groupName, table.tenantId)
 }))
@@ -75,3 +77,52 @@ export const employees = pgTable("employees", {
     updatedAt : timestamp("updated_at").defaultNow().$onUpdate(()=>new Date())
 
 })
+
+
+export const schemaRelation = defineRelations({users, employees, groups, sectors,  tenants,}, (r)=>({
+  employees:{
+    tenant :r.one.tenants({
+      from : r.employees.tenantId,
+      to : r.tenants.id
+    }),
+    group:r.one.groups({
+      from : r.employees.groupId,
+      to : r.groups.id
+    }),
+    sector : r.one.sectors({
+      from : r.employees.sectorId,
+      to : r.sectors.id
+    }),
+    users : r.one.users({
+      from : r.employees.registeredById,
+      to : r.users.id
+    })
+  },
+  groups : {
+    tenant : r.one.tenants({
+      from : r.groups.tenantId,
+      to : r.tenants.id
+    }),
+    employees : r.many.employees()
+  },
+  sectors: {
+      tenant: r.one.tenants({
+        from: r.sectors.tenantId,
+        to: r.tenants.id,
+      }),
+      employees: r.many.employees(),
+    },
+    tenants: {
+      employees: r.many.employees(),
+      groups: r.many.groups(),
+      sectors: r.many.sectors(),
+      users: r.many.users(),
+    },
+    users: {
+      tenant: r.one.tenants({
+        from: r.users.tenantId,
+        to: r.tenants.id,
+      }),
+      employees: r.many.employees(),
+    },
+}))
